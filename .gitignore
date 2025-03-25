@@ -1,5 +1,4 @@
-
-# Node.js dependencies
+# .gitignore
 node_modules/
 
-node_modules/
+
