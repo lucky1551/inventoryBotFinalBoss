@@ -708,6 +708,24 @@
 const crypto = require('crypto');
 global.crypto = crypto;
 
+
+
+const { Client } = require('pg');
+
+const dbConfig = {
+    host: process.env.DATABASE_HOST,
+    port: process.env.DATABASE_PORT ? parseInt(process.env.DATABASE_PORT) : 5432,
+    user: process.env.DATABASE_USER,
+    password: process.env.DATABASE_PASSWORD,
+    database: process.env.DATABASE_NAME,
+};
+
+const getDbClient = async () => {
+    const client = new Client(dbConfig);
+    await client.connect();
+    return client;
+};
+
 const { useMultiFileAuthState, makeWASocket, delay, DisconnectReason } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const qrcode = require('qrcode-terminal');
