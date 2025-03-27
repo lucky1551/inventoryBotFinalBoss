@@ -807,7 +807,7 @@ const loadAuthState = async () => {
       if (result.rows.length > 0) {
           return JSON.parse(result.rows[0].data);
       }
-      return {}; // Return an empty object if no data is found
+      return {}; // Keep returning an empty object for now, but we might need to adjust further
   } catch (error) {
       console.error('Error loading auth state from database:', error);
       return {};
