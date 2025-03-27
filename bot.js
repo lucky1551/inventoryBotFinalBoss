@@ -710,21 +710,6 @@ global.crypto = crypto;
 
 const { getDbClient } = require('./database/db');
 
-// const { Client } = require('pg');
-
-// const dbConfig = {
-//     host: process.env.DATABASE_HOST,
-//     port: process.env.DATABASE_PORT ? parseInt(process.env.DATABASE_PORT) : 5432,
-//     user: process.env.DATABASE_USER,
-//     password: process.env.DATABASE_PASSWORD,
-//     database: process.env.DATABASE_NAME,
-// };
-
-// const getDbClient = async () => {
-//     const client = new Client(dbConfig);
-//     await client.connect();
-//     return client;
-// };
 
 const { useMultiFileAuthState, makeWASocket, delay, DisconnectReason } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
@@ -784,6 +769,36 @@ oauth2Client.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN })
 const drive = google.drive({ version: "v3", auth: oauth2Client });
 
 
+const loadAuthState = async () => {
+  const client = await getDbClient();
+  try {
+      const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
+      console.log('🔍 loadAuthState query result:', result);
+      if (result.rows.length > 0) {
+          const dbData = JSON.parse(result.rows[0].data);
+          console.log('🔑 Found auth state in database');
+          return {
+              creds: dbData, // Wrap the loaded data in 'creds'
+              keys: {}      // Provide an empty 'keys' object
+          };
+      }
+      console.log('💾 No auth state found in database');
+      return {
+          creds: {},
+          keys: {}
+      };
+  } catch (error) {
+      console.error('❌ Error loading auth state from database:', error);
+      return {
+          creds: {},
+          keys: {}
+      };
+  } finally {
+      if (client) {
+          client.end();
+      }
+  }
+};
 const saveAuthState = async (creds) => {
   const client = await getDbClient();
   try {
@@ -791,33 +806,89 @@ const saveAuthState = async (creds) => {
           'INSERT INTO whatsapp_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
           ['baileys_auth', JSON.stringify(creds)]
       );
+      console.log('✅ Auth state saved to database');
   } catch (error) {
-      console.error('Error saving auth state to database:', error);
+      console.error('❌ Error saving auth state to database:', error);
   } finally {
       if (client) {
           client.end();
       }
   }
 };
-
-const loadAuthState = async () => {
-  const client = await getDbClient();
-  try {
-      const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
-      if (result.rows.length > 0) {
-          return JSON.parse(result.rows[0].data);
-      }
-      return {}; // Keep returning an empty object for now, but we might need to adjust further
-  } catch (error) {
-      console.error('Error loading auth state from database:', error);
-      return {};
-  } finally {
-      if (client) {
-          client.end();
-      }
-  }
-};
+// const loadAuthState = async () => {
+//   const client = await getDbClient();
+//   try {
+//       const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
+//       if (result.rows.length > 0) {
+//           return JSON.parse(result.rows[0].data);
+//       }
+//       return {};
+//   } catch (error) {
+//       console.error('Error loading auth state from database:', error);
+//       return {};
+//   } finally {
+//       if (client) {
+//           client.end();
+//       }
+//   }
+// };
+//   const client = await getDbClient();
+//   try {
+//       const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
+//       if (result.rows.length > 0) {
+//           return JSON.parse(result.rows[0].data);
+//       }
+//       return {
+//           creds: {},
+//           keys: {}
+//       };
+//   } catch (error) {
+//       console.error('Error loading auth state from database:', error);
+//       return {
+//           creds: {},
+//           keys: {}
+//       };
+//   } finally {
+//       if (client) {
+//           client.end();
+//       }
+//   }
+// };
 // State Management
+// const saveAuthState = async (creds) => {
+//   const client = await getDbClient();
+//   try {
+//       await client.query(
+//           'INSERT INTO whatsapp_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
+//           ['baileys_auth', JSON.stringify(creds)]
+//       );
+//       console.log('✅ Auth state saved to database');
+//   } catch (error) {
+//       console.error('❌ Error saving auth state to database:', error);
+//   } finally {
+//       if (client) {
+//           client.end();
+//       }
+//   }
+// };
+
+// const loadAuthState = async () => {
+//   const client = await getDbClient();
+//   try {
+//       const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
+//       if (result.rows.length > 0) {
+//           return JSON.parse(result.rows[0].data);
+//       }
+//       return {};
+//   } catch (error) {
+//       console.error('Error loading auth state from database:', error);
+//       return {};
+//   } finally {
+//       if (client) {
+//           client.end();
+//       }
+//   }
+// };
 const BotState = {
   IDLE: "IDLE",
   INITIAL_MENU: "INITIAL_MENU",
@@ -852,68 +923,107 @@ class InventoryBot {
     this.startWebServer();
   }
 
-  // async initializeWhatsApp() {
-  //   // const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-  //   const { state, saveCreds } = await (async () => {
-  //     const state = await loadAuthState();
-  //     return {
-  //         state,
-  //         saveCreds: async (creds) => {
-  //             await saveAuthState({ keys: creds.keys }); // Adjust based on baileys' state structure if needed
-  //         },
-  //     };
-  // })();
-  //   this.sock = makeWASocket({
-  //     printQRInTerminal: false,
-  //     auth: state,
-  //     browser: ['Inventory Bot', 'Chrome', '1.0'],
-  //     getMessage: async () => ({}),
-  //     markOnlineOnConnect: true,
-  //   });
+  
 
-  //   this.setupEventHandlers(saveCreds);
-  // }
+// async initializeWhatsApp() {
+//   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+//   this.sock = makeWASocket({
+//     printQRInTerminal: !process.env.RENDER,
+//     auth: state,
+//     browser: ['Inventory Bot', 'Chrome', '1.0'],
+//     getMessage: async () => ({}),
+//     markOnlineOnConnect: true,
+//   });
 
-  async initializeWhatsApp() {
-    // const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-    const { state, saveCreds } = await (async () => {
-      const state = await loadAuthState();
-      return {
-          state,
-          saveCreds: async (creds) => {
-              await saveAuthState(creds); // Pass the entire creds object
-          },
-      };
-  })();
-    this.sock = makeWASocket({
-      printQRInTerminal: false,
-      auth: state,
-      browser: ['Inventory Bot', 'Chrome', '1.0'],
-      getMessage: async () => ({}),
-      markOnlineOnConnect: true,
-    });
+//   this.setupEventHandlers(saveCreds); // Use the saveCreds from useMultiFileAuthState
+// }
 
-    this.setupEventHandlers(saveCreds);
-}
-
-  setupEventHandlers(saveCreds) {
-    this.sock.ev.on('connection.update', async (update) => {
-      const { connection, qr } = update;
-      if (qr) qrcode.generate(qr, { small: true });
-      
-      if (connection === 'close') {
-        this.handleConnectionClose(update);
-      } else if (connection === 'open') {
-        console.log('✅ WhatsApp connection established');
+async initializeWhatsApp() {
+  async function loadAuthStateRaw() {
+      const client = await getDbClient();
+      try {
+          const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
+          if (result.rows.length > 0) {
+              console.log('🔑 Found raw auth state in database');
+              return result.rows[0].data;
+          }
+          console.log('💾 No raw auth state found in database');
+          return null;
+      } catch (error) {
+          console.error('❌ Error loading raw auth state from database:', error);
+          return null;
+      } finally {
+          if (client) {
+              client.end();
+          }
       }
-    });
-
-    this.sock.ev.on('creds.update', saveCreds);
-    this.sock.ev.on('messages.upsert', async ({ messages }) => {
-      await this.handleMessage(messages[0]);
-    });
   }
 
+  const dbAuthStateRaw = await loadAuthStateRaw();
+
+  let state;
+  if (dbAuthStateRaw) {
+      console.log('🔑 Found raw auth state in database, attempting to use MultiFileAuthState');
+      const { state: fileAuthState } = await useMultiFileAuthState(AUTH_DIR, {
+          state: JSON.parse(dbAuthStateRaw)
+      });
+      state = fileAuthState;
+  } else {
+      console.log('💾 No auth state in database, using fresh file-based auth');
+      const { state: fileAuthState } = await useMultiFileAuthState(AUTH_DIR);
+      state = fileAuthState;
+  }
+
+  const { saveCreds: saveCredsToFile } = await useMultiFileAuthState(AUTH_DIR);
+
+  const saveCredsToDb = async (creds) => {
+      const client = await getDbClient();
+      try {
+          await client.query(
+              'INSERT INTO whatsapp_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
+              ['baileys_auth', JSON.stringify(creds)]
+          );
+          console.log('✅ Auth state saved to database');
+      } catch (error) {
+          console.error('❌ Error saving auth state to database:', error);
+      } finally {
+          if (client) {
+              client.end();
+          }
+      }
+      await saveCredsToFile(creds);
+  };
+
+  this.sock = makeWASocket({
+    printQRInTerminal: !process.env.RENDER,
+    auth: state,
+    browser: ['Inventory Bot', 'Chrome', '1.0'],
+    getMessage: async () => ({}),
+    markOnlineOnConnect: true,
+  });
+
+  this.setupEventHandlers(saveCredsToDb);
+}
+
+
+setupEventHandlers(saveCreds) {
+  this.sock.ev.on('connection.update', async (update) => {
+    const { connection, qr } = update;
+    if (qr) qrcode.generate(qr, { small: true });
+
+    if (connection === 'close') {
+      this.handleConnectionClose(update);
+    } else if (connection === 'open') {
+      console.log('✅ WhatsApp connection established');
+    }
+  });
+
+  this.sock.ev.on('creds.update', saveCreds); // saveCreds will be saveCredsToDb
+
+  this.sock.ev.on('messages.upsert', async ({ messages }) => {
+    await this.handleMessage(messages[0]);
+  });
+}
   async handleConnectionClose({ lastDisconnect }) {
     if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
       console.log('🔁 Reconnecting...');
