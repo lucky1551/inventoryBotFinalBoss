@@ -708,23 +708,23 @@
 const crypto = require('crypto');
 global.crypto = crypto;
 
+const { getDbClient, releaseClient } = require('./database/db');
 
+// const { Client } = require('pg');
 
-const { Client } = require('pg');
+// const dbConfig = {
+//     host: process.env.DATABASE_HOST,
+//     port: process.env.DATABASE_PORT ? parseInt(process.env.DATABASE_PORT) : 5432,
+//     user: process.env.DATABASE_USER,
+//     password: process.env.DATABASE_PASSWORD,
+//     database: process.env.DATABASE_NAME,
+// };
 
-const dbConfig = {
-    host: process.env.DATABASE_HOST,
-    port: process.env.DATABASE_PORT ? parseInt(process.env.DATABASE_PORT) : 5432,
-    user: process.env.DATABASE_USER,
-    password: process.env.DATABASE_PASSWORD,
-    database: process.env.DATABASE_NAME,
-};
-
-const getDbClient = async () => {
-    const client = new Client(dbConfig);
-    await client.connect();
-    return client;
-};
+// const getDbClient = async () => {
+//     const client = new Client(dbConfig);
+//     await client.connect();
+//     return client;
+// };
 
 const { useMultiFileAuthState, makeWASocket, delay, DisconnectReason } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
@@ -783,6 +783,39 @@ const oauth2Client = new google.auth.OAuth2(
 oauth2Client.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
 const drive = google.drive({ version: "v3", auth: oauth2Client });
 
+
+const saveAuthState = async (state) => {
+  const client = await getDbClient();
+  try {
+      for (const key in state.keys) {
+          await client.query(
+              'INSERT INTO whatsapp_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
+              [key, JSON.stringify(state.keys[key])]
+          );
+      }
+  } catch (error) {
+      console.error('Error saving auth state to database:', error);
+  } finally {
+      releaseClient(client);
+  }
+};
+
+const loadAuthState = async () => {
+  const client = await getDbClient();
+  try {
+      const result = await client.query('SELECT id, data FROM whatsapp_sessions');
+      const state = { keys: {} };
+      for (const row of result.rows) {
+          state.keys[row.id] = JSON.parse(row.data);
+      }
+      return state;
+  } catch (error) {
+      console.error('Error loading auth state from database:', error);
+      return { keys: {} }; // Return an empty state if there's an error
+  } finally {
+      releaseClient(client);
+  }
+};
 // State Management
 const BotState = {
   IDLE: "IDLE",
@@ -819,8 +852,16 @@ class InventoryBot {
   }
 
   async initializeWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-    
+    // const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    const { state, saveCreds } = await (async () => {
+      const state = await loadAuthState();
+      return {
+          state,
+          saveCreds: async (creds) => {
+              await saveAuthState({ keys: creds.keys }); // Adjust based on baileys' state structure if needed
+          },
+      };
+  })();
     this.sock = makeWASocket({
       printQRInTerminal: false,
       auth: state,
