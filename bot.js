@@ -784,36 +784,33 @@ oauth2Client.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN })
 const drive = google.drive({ version: "v3", auth: oauth2Client });
 
 
-const saveAuthState = async (state) => {
+const saveAuthState = async (creds) => {
   const client = await getDbClient();
   try {
-      for (const key in state.keys) {
-          await client.query(
-              'INSERT INTO whatsapp_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
-              [key, JSON.stringify(state.keys[key])]
-          );
-      }
+      await client.query(
+          'INSERT INTO whatsapp_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
+          ['baileys_auth', JSON.stringify(creds)]
+      );
   } catch (error) {
       console.error('Error saving auth state to database:', error);
   } finally {
-    if (client) {
-        client.end(); // Close the connection after the operation
-    }
-}
+      if (client) {
+          client.end();
+      }
+  }
 };
 
 const loadAuthState = async () => {
   const client = await getDbClient();
   try {
-      const result = await client.query('SELECT id, data FROM whatsapp_sessions');
-      const state = {};
-      for (const row of result.rows) {
-          state[row.id] = JSON.parse(row.data);
+      const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
+      if (result.rows.length > 0) {
+          return JSON.parse(result.rows[0].data);
       }
-      return state; // Return the state object directly
+      return {}; // Return an empty object if no data is found
   } catch (error) {
       console.error('Error loading auth state from database:', error);
-      return {}; // Return an empty object on error
+      return {};
   } finally {
       if (client) {
           client.end();
