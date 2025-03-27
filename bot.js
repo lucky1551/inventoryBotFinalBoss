@@ -806,19 +806,19 @@ const loadAuthState = async () => {
   const client = await getDbClient();
   try {
       const result = await client.query('SELECT id, data FROM whatsapp_sessions');
-      const state = { keys: {} };
+      const state = {};
       for (const row of result.rows) {
-          state.keys[row.id] = JSON.parse(row.data);
+          state[row.id] = JSON.parse(row.data);
       }
-      return state;
+      return state; // Return the state object directly
   } catch (error) {
       console.error('Error loading auth state from database:', error);
-      return { keys: {} }; // Return an empty state if there's an error
+      return {}; // Return an empty object on error
   } finally {
-    if (client) {
-        client.end(); // Close the connection after the operation
-    }
-}
+      if (client) {
+          client.end();
+      }
+  }
 };
 // State Management
 const BotState = {
