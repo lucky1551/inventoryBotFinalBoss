@@ -852,6 +852,28 @@ class InventoryBot {
     this.startWebServer();
   }
 
+  // async initializeWhatsApp() {
+  //   // const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+  //   const { state, saveCreds } = await (async () => {
+  //     const state = await loadAuthState();
+  //     return {
+  //         state,
+  //         saveCreds: async (creds) => {
+  //             await saveAuthState({ keys: creds.keys }); // Adjust based on baileys' state structure if needed
+  //         },
+  //     };
+  // })();
+  //   this.sock = makeWASocket({
+  //     printQRInTerminal: false,
+  //     auth: state,
+  //     browser: ['Inventory Bot', 'Chrome', '1.0'],
+  //     getMessage: async () => ({}),
+  //     markOnlineOnConnect: true,
+  //   });
+
+  //   this.setupEventHandlers(saveCreds);
+  // }
+
   async initializeWhatsApp() {
     // const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     const { state, saveCreds } = await (async () => {
@@ -859,7 +881,7 @@ class InventoryBot {
       return {
           state,
           saveCreds: async (creds) => {
-              await saveAuthState({ keys: creds.keys }); // Adjust based on baileys' state structure if needed
+              await saveAuthState(creds); // Pass the entire creds object
           },
       };
   })();
@@ -872,7 +894,7 @@ class InventoryBot {
     });
 
     this.setupEventHandlers(saveCreds);
-  }
+}
 
   setupEventHandlers(saveCreds) {
     this.sock.ev.on('connection.update', async (update) => {
