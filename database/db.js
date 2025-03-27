@@ -19,10 +19,6 @@ const getDbClient = async () => {
     }
 };
 
-const releaseClient = (client) => {
-    if (client) {
-        client.release();
-    }
-};
+// Removed releaseClient function
 
-module.exports = { getDbClient, releaseClient };
+module.exports = { getDbClient }; // Removed releaseClient from exports

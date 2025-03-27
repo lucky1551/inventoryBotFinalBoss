@@ -708,7 +708,7 @@
 const crypto = require('crypto');
 global.crypto = crypto;
 
-const { getDbClient, releaseClient } = require('./database/db');
+const { getDbClient } = require('./database/db');
 
 // const { Client } = require('pg');
 
@@ -796,8 +796,10 @@ const saveAuthState = async (state) => {
   } catch (error) {
       console.error('Error saving auth state to database:', error);
   } finally {
-      releaseClient(client);
-  }
+    if (client) {
+        client.end(); // Close the connection after the operation
+    }
+}
 };
 
 const loadAuthState = async () => {
@@ -813,8 +815,10 @@ const loadAuthState = async () => {
       console.error('Error loading auth state from database:', error);
       return { keys: {} }; // Return an empty state if there's an error
   } finally {
-      releaseClient(client);
-  }
+    if (client) {
+        client.end(); // Close the connection after the operation
+    }
+}
 };
 // State Management
 const BotState = {
