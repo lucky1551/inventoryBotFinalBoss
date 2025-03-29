@@ -770,125 +770,96 @@ const drive = google.drive({ version: "v3", auth: oauth2Client });
 
 
 const loadAuthState = async () => {
-  const client = await getDbClient();
-  try {
-      const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
-      console.log('🔍 loadAuthState query result:', result);
-      if (result.rows.length > 0) {
-          const dbData = JSON.parse(result.rows[0].data);
-          console.log('🔑 Found auth state in database');
-          return {
-              creds: dbData, // Wrap the loaded data in 'creds'
-              keys: {}      // Provide an empty 'keys' object
-          };
-      }
-      console.log('💾 No auth state found in database');
-      return {
-          creds: {},
-          keys: {}
-      };
-  } catch (error) {
-      console.error('❌ Error loading auth state from database:', error);
-      return {
-          creds: {},
-          keys: {}
-      };
-  } finally {
-      if (client) {
-          client.end();
-      }
-  }
-};
-const saveAuthState = async (creds) => {
-  const client = await getDbClient();
-  try {
-      await client.query(
-          'INSERT INTO whatsapp_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
-          ['baileys_auth', JSON.stringify(creds)]
-      );
-      console.log('✅ Auth state saved to database');
-  } catch (error) {
-      console.error('❌ Error saving auth state to database:', error);
-  } finally {
-      if (client) {
-          client.end();
-      }
-  }
-};
-// const loadAuthState = async () => {
-//   const client = await getDbClient();
-//   try {
-//       const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
-//       if (result.rows.length > 0) {
-//           return JSON.parse(result.rows[0].data);
-//       }
-//       return {};
-//   } catch (error) {
-//       console.error('Error loading auth state from database:', error);
-//       return {};
-//   } finally {
-//       if (client) {
-//           client.end();
-//       }
-//   }
-// };
-//   const client = await getDbClient();
-//   try {
-//       const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
-//       if (result.rows.length > 0) {
-//           return JSON.parse(result.rows[0].data);
-//       }
-//       return {
-//           creds: {},
-//           keys: {}
-//       };
-//   } catch (error) {
-//       console.error('Error loading auth state from database:', error);
-//       return {
-//           creds: {},
-//           keys: {}
-//       };
-//   } finally {
-//       if (client) {
-//           client.end();
-//       }
-//   }
-// };
-// State Management
-// const saveAuthState = async (creds) => {
-//   const client = await getDbClient();
-//   try {
-//       await client.query(
-//           'INSERT INTO whatsapp_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
-//           ['baileys_auth', JSON.stringify(creds)]
-//       );
-//       console.log('✅ Auth state saved to database');
-//   } catch (error) {
-//       console.error('❌ Error saving auth state to database:', error);
-//   } finally {
-//       if (client) {
-//           client.end();
-//       }
-//   }
-// };
 
-// const loadAuthState = async () => {
-//   const client = await getDbClient();
-//   try {
-//       const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
-//       if (result.rows.length > 0) {
-//           return JSON.parse(result.rows[0].data);
-//       }
-//       return {};
-//   } catch (error) {
-//       console.error('Error loading auth state from database:', error);
-//       return {};
-//   } finally {
-//       if (client) {
-//           client.end();
-//       }
-//   }
-// };
+  const client = await getDbClient();
+  
+  try {
+  
+  const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
+  
+  console.log('🔍 loadAuthState query result:', result);
+  
+  if (result.rows.length > 0) {
+  
+  const dbData = JSON.parse(result.rows[0].data);
+  
+  console.log('🔑 Found auth state in database');
+  
+  return {
+  
+  creds: dbData, // Wrap the loaded data in 'creds'
+  
+  keys: {} // Provide an empty 'keys' object
+  
+  };
+  
+  }
+  
+  console.log('💾 No auth state found in database');
+  
+  return {
+  
+  creds: {},
+  
+  keys: {}
+  
+  };
+  
+  } catch (error) {
+  
+  console.error('❌ Error loading auth state from database:', error);
+  
+  return {
+  
+  creds: {},
+  
+  keys: {}
+  
+  };
+  
+  } finally {
+  
+  if (client) {
+  
+  client.end();
+  
+  }
+  
+  }
+  
+  };
+  
+  const saveAuthState = async (creds) => {
+  
+  const client = await getDbClient();
+  
+  try {
+  
+  await client.query(
+  
+  'INSERT INTO whatsapp_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
+  
+  ['baileys_auth', JSON.stringify(creds)]
+  
+  );
+  
+  console.log('✅ Auth state saved to database');
+  
+  } catch (error) {
+  
+  console.error('❌ Error saving auth state to database:', error);
+  
+  } finally {
+  
+  if (client) {
+  
+  client.end();
+  
+  }
+  
+  }
+  
+  };
 const BotState = {
   IDLE: "IDLE",
   INITIAL_MENU: "INITIAL_MENU",
@@ -939,60 +910,7 @@ class InventoryBot {
 // }
 
 async initializeWhatsApp() {
-  async function loadAuthStateRaw() {
-      const client = await getDbClient();
-      try {
-          const result = await client.query('SELECT data FROM whatsapp_sessions WHERE id = $1', ['baileys_auth']);
-          if (result.rows.length > 0) {
-              console.log('🔑 Found raw auth state in database');
-              return result.rows[0].data;
-          }
-          console.log('💾 No raw auth state found in database');
-          return null;
-      } catch (error) {
-          console.error('❌ Error loading raw auth state from database:', error);
-          return null;
-      } finally {
-          if (client) {
-              client.end();
-          }
-      }
-  }
-
-  const dbAuthStateRaw = await loadAuthStateRaw();
-
-  let state;
-  if (dbAuthStateRaw) {
-      console.log('🔑 Found raw auth state in database, attempting to use MultiFileAuthState');
-      const { state: fileAuthState } = await useMultiFileAuthState(AUTH_DIR, {
-          state: JSON.parse(dbAuthStateRaw)
-      });
-      state = fileAuthState;
-  } else {
-      console.log('💾 No auth state in database, using fresh file-based auth');
-      const { state: fileAuthState } = await useMultiFileAuthState(AUTH_DIR);
-      state = fileAuthState;
-  }
-
-  const { saveCreds: saveCredsToFile } = await useMultiFileAuthState(AUTH_DIR);
-
-  const saveCredsToDb = async (creds) => {
-      const client = await getDbClient();
-      try {
-          await client.query(
-              'INSERT INTO whatsapp_sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
-              ['baileys_auth', JSON.stringify(creds)]
-          );
-          console.log('✅ Auth state saved to database');
-      } catch (error) {
-          console.error('❌ Error saving auth state to database:', error);
-      } finally {
-          if (client) {
-              client.end();
-          }
-      }
-      await saveCredsToFile(creds);
-  };
+  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
   this.sock = makeWASocket({
     printQRInTerminal: !process.env.RENDER,
@@ -1002,7 +920,7 @@ async initializeWhatsApp() {
     markOnlineOnConnect: true,
   });
 
-  this.setupEventHandlers(saveCredsToDb);
+  this.setupEventHandlers(saveCreds);
 }
 
 
@@ -1018,12 +936,16 @@ setupEventHandlers(saveCreds) {
     }
   });
 
-  this.sock.ev.on('creds.update', saveCreds); // saveCreds will be saveCredsToDb
+  this.sock.ev.on('creds.update', saveCreds);
 
   this.sock.ev.on('messages.upsert', async ({ messages }) => {
     await this.handleMessage(messages[0]);
   });
 }
+
+
+
+
   async handleConnectionClose({ lastDisconnect }) {
     if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
       console.log('🔁 Reconnecting...');
@@ -1032,11 +954,12 @@ setupEventHandlers(saveCreds) {
     }
   }
 
-  async handleMessage(message) {
-    if (message.key.fromMe || !message.message?.conversation) return;
-    
-    const jid = message.key.remoteJid;
-    const userMessage = message.message.conversation.trim().toLowerCase();
+  async handleMessage(msg) {
+    console.log('handleMessage called');
+  console.log('Incoming Message:', msg);
+  if (msg.key.fromMe || !msg.message?.conversation) return;    
+    const jid = msg.key.remoteJid;
+    const userMessage = msg.message.conversation.trim().toLowerCase();
     const userState = this.userStates.get(jid) || { state: BotState.IDLE };
 
     try {
@@ -1060,7 +983,7 @@ setupEventHandlers(saveCreds) {
           await this.handleInitialMenu(jid, userMessage);
           break;
         case BotState.SEARCHING:
-          await this.handleSearchState(jid, message.message.conversation.trim(), userState);
+          await this.handleSearchState(jid, msg.message.conversation.trim(), userState);
           break;
         case BotState.SELECTING_ITEM:
           await this.handleSelectingItem(jid, userMessage, userState);
@@ -1072,7 +995,7 @@ setupEventHandlers(saveCreds) {
           await this.handleUpdatingValue(jid, message.message.conversation.trim(), userState);
           break;
         case BotState.ADDING_ITEM:
-          await this.handleAddingItem(jid, message.message.conversation.trim(), userState);
+          await this.handleAddingItem(jid, msg.message.conversation.trim(), userState);
           break;
         case BotState.ADDING_CONFIRM:
           await this.handleAddingConfirm(jid, userMessage, userState);
@@ -1081,7 +1004,7 @@ setupEventHandlers(saveCreds) {
           await this.handleListingItems(jid, userState);
           break;
         case BotState.DELETING_ITEM:
-          await this.handleDeletingItem(jid, message.message.conversation.trim(), userState);
+          await this.handleDeletingItem(jid, msg.message.conversation.trim(), userState);
           break;
         case BotState.SELECTING_ITEM_TO_DELETE:
           await this.handleSelectingItemToDelete(jid, userMessage, userState);
@@ -1156,14 +1079,22 @@ setupEventHandlers(saveCreds) {
 
   async handleSearchState(jid, input, userState) {
     const searchTerm = input.toLowerCase();
-    
-    const foundItems = this.data.filter(entry => {
-      const materialCode = String(entry["Material Code"] || '').toLowerCase();
-      const itemDescription = String(entry["Item Description"] || '').toLowerCase();
-      
-      return materialCode.startsWith(searchTerm) || 
-             itemDescription.includes(searchTerm);
+    let foundIndices = new Set();
+
+    const materialCodeIndex = this.materialCodeIndex.get(searchTerm);
+    if (materialCodeIndex !== undefined) {
+        foundIndices.add(materialCodeIndex);
+    }
+
+    searchTerm.split(/\s+/).forEach(keyword => {
+        const indices = this.descriptionIndex.get(keyword);
+        if (indices) {
+            foundIndices = new Set([...foundIndices, ...indices]);
+        }
     });
+
+    const foundItems = Array.from(foundIndices).map(index => this.data[index]);
+    
   
 
     if (foundItems.length === 1) {
@@ -1317,29 +1248,30 @@ setupEventHandlers(saveCreds) {
   }
 
   async handleDeletingItem(jid, input, userState) {
+    const searchTerm = input.toLowerCase().trim();
     const foundItems = this.data.filter(entry =>
-      (entry["Material Code"]?.toString().trim().toLowerCase().startsWith(input.toLowerCase())) ||
-      (entry["Item Description"]?.toLowerCase().includes(input.toLowerCase()))
+      (entry["Material Code"]?.toString().toLowerCase().includes(searchTerm)) ||
+      (entry["Item Description"]?.toLowerCase().includes(searchTerm))
     );
 
-    if (foundItems.length === 1) {
-      this.data = this.data.filter(item => 
-        item["Material Code"] !== foundItems[0]["Material Code"] || 
-        item["Item Description"] !== foundItems[0]["Item Description"]
+    if (foundItems.length === 0) {
+      await this.sendMessage(jid, MESSAGES.NO_ITEMS_FOUND);
+      userState.state = BotState.IDLE;
+    } else if (foundItems.length === 1) {
+      const itemToDelete = foundItems[0];
+      this.data = this.data.filter(item =>
+        item[SERIAL_NUMBER_FIELD] !== itemToDelete[SERIAL_NUMBER_FIELD]
       );
       await this.updateExcelFile();
       await this.sendMessage(jid, MESSAGES.SUCCESS_DELETE);
       userState.state = BotState.IDLE;
-    } else if (foundItems.length > 1) {
+    } else {
       userState.foundItems = foundItems;
       userState.state = BotState.SELECTING_ITEM_TO_DELETE;
-      const itemsList = foundItems.map((item, index) => 
+      const itemsList = foundItems.map((item, index) =>
         `${index + 1}. ${item[SERIAL_NUMBER_FIELD]} - ${item["Material Code"]} - ${item["Item Description"]}`
       ).join("\n");
       await this.sendMessage(jid, MESSAGES.SELECT_ITEM_PROMPT(itemsList));
-    } else {
-      await this.sendMessage(jid, MESSAGES.NO_ITEMS_FOUND);
-      userState.state = BotState.IDLE;
     }
     this.userStates.set(jid, userState);
   }
@@ -1348,9 +1280,8 @@ setupEventHandlers(saveCreds) {
     const deleteIndex = parseInt(message) - 1;
     if (!isNaN(deleteIndex) && deleteIndex >= 0 && deleteIndex < userState.foundItems.length) {
       const itemToDelete = userState.foundItems[deleteIndex];
-      this.data = this.data.filter(item => 
-        item["Material Code"] !== itemToDelete["Material Code"] || 
-        item["Item Description"] !== itemToDelete["Item Description"]
+      this.data = this.data.filter(item =>
+        item[SERIAL_NUMBER_FIELD] !== itemToDelete[SERIAL_NUMBER_FIELD]
       );
       await this.updateExcelFile();
       await this.sendMessage(jid, MESSAGES.SUCCESS_DELETE);
@@ -1444,6 +1375,21 @@ setupEventHandlers(saveCreds) {
       );
       return normalizedEntry;
     });
+
+    this.materialCodeIndex = new Map();
+this.descriptionIndex = new Map();
+this.data.forEach((item, index) => {
+    this.materialCodeIndex.set(item["Material Code"]?.toString().toLowerCase(), index);
+    const keywords = item["Item Description"]?.toLowerCase().split(/\s+/);
+    keywords?.forEach(keyword => {
+        if (keyword) {
+            if (!this.descriptionIndex.has(keyword)) {
+                this.descriptionIndex.set(keyword, new Set());
+            }
+            this.descriptionIndex.get(keyword).add(index);
+        }
+    });
+});
   }
 
   async updateExcelFile() {
@@ -1468,7 +1414,7 @@ setupEventHandlers(saveCreds) {
 
   startWebServer() {
     const app = express();
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.PORT;
     app.get('/', (req, res) => res.send('🤖 Inventory Bot Online'));
     app.listen(PORT, () => console.log(`Web server running on port ${PORT}`));
   }
@@ -2049,6 +1995,13 @@ new InventoryBot();
 // }
 
 // new InventoryBot();
+
+
+
+
+
+
+
 
 
 
