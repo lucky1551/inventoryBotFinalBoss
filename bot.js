@@ -1078,25 +1078,12 @@ setupEventHandlers(saveCreds) {
   }
 
   async handleSearchState(jid, input, userState) {
-    const searchTerm = input.toLowerCase();
-    let foundIndices = new Set();
-
-    const materialCodeIndex = this.materialCodeIndex.get(searchTerm);
-    if (materialCodeIndex !== undefined) {
-        foundIndices.add(materialCodeIndex);
-    }
-
-    searchTerm.split(/\s+/).forEach(keyword => {
-        const indices = this.descriptionIndex.get(keyword);
-        if (indices) {
-            foundIndices = new Set([...foundIndices, ...indices]);
-        }
-    });
-
-    const foundItems = Array.from(foundIndices).map(index => this.data[index]);
-    
+    const searchTerm = input.toLowerCase().trim();
+    const foundItems = this.data.filter(entry =>
+      (entry["Material Code"]?.toString().toLowerCase().includes(searchTerm)) ||
+      (entry["Item Description"]?.toLowerCase().includes(searchTerm))
+    );
   
-
     if (foundItems.length === 1) {
       userState.currentItem = foundItems[0];
       userState.state = BotState.UPDATING;
@@ -1104,7 +1091,7 @@ setupEventHandlers(saveCreds) {
     } else if (foundItems.length > 1) {
       userState.foundItems = foundItems;
       userState.state = BotState.SELECTING_ITEM;
-      const itemsList = foundItems.map((item, index) => 
+      const itemsList = foundItems.map((item, index) =>
         `${index + 1}. ${item[SERIAL_NUMBER_FIELD]} - ${item["Material Code"]} - ${item["Item Description"]}`
       ).join("\n");
       await this.sendMessage(jid, MESSAGES.SELECT_ITEM_PROMPT(itemsList));
@@ -1113,7 +1100,6 @@ setupEventHandlers(saveCreds) {
     }
     this.userStates.set(jid, userState);
   }
-
   async handleSelectingItem(jid, message, userState) {
     const selectedIndex = parseInt(message) - 1;
     if (!isNaN(selectedIndex) && selectedIndex >= 0 && selectedIndex < userState.foundItems.length) {
